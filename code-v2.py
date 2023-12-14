@@ -7,37 +7,40 @@ from sklearn.metrics import accuracy_score, confusion_matrix, log_loss
 import matplotlib.pyplot as plt
 import cv2
 
-# Load train data
-train_file = '/home/ababa/Downloads/ml-project/code-test/v1/train-classes/train.csv'
-# Update with the correct path
-train_data = pd.read_csv(train_file, delimiter=';')
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
-# Load test data
-test_file = '/home/ababa/Downloads/ml-project/code-test/v1/test-classes/test.csv'
-# Update with the correct path
+# Update with the correct relative paths
+test_kmean = os.path.join(script_dir, 'test.csv')
+train_file = os.path.join(script_dir, 'train-classes', 'train.csv')
+test_file = os.path.join(script_dir, 'test-classes', 'test.csv')
+image_folder = os.path.join(script_dir, 'train-classes')
+image_folder_test = os.path.join(script_dir, 'test-classes')
+
+
+# load info from csv files
+train_data = pd.read_csv(train_file, delimiter=';')
 test_data = pd.read_csv(test_file, delimiter=';')
 
 # Load images
-image_folder = '/home/ababa/Downloads/ml-project/code-test/v1/train-classes/'
-image_folder_test = '/home/ababa/Downloads/ml-project/code-test/v1/test-classes/'
 train_images = [os.path.join(image_folder, filename) for filename in train_data['Filename']]
 test_images = [os.path.join(image_folder_test, filename) for filename in test_data['Filename']]
 
 
 # Function to load images
 # Function to load and resize images
+# Function to make hog for photes insted of gray scale
 def load_images(image_paths, target_size=(100, 100)):
     images = []
     for path in image_paths:
         # img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = cv2.imread(path)
         img = cv2.resize(img, target_size)  # Resize to a common size
-        #cv2.imshow("Resized Image", img)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-        #hog = cv2.HOGDescriptor()
+        # cv2.imshow("Resized Image", img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        # hog = cv2.HOGDescriptor()
         # --------------------------------------------
-        #hoog = hog.compute(img)
+        # hoog = hog.compute(img)
         images.append(img.flatten())
     return np.array(images)
 
@@ -48,7 +51,7 @@ y_train = train_data['ClassId']
 y_test = test_data['ClassId']
 
 # Train the logistic regression model
-logreg = LogisticRegression(random_state=42,max_iter=1000)
+logreg = LogisticRegression(random_state=42, max_iter=1000)
 logreg.fit(X_train, y_train)
 # Evaluate the model
 y_pred = logreg.predict(X_test)
@@ -65,18 +68,13 @@ test_data['KMeans_Cluster'] = test_cluster_assignments
 
 
 print("Number of Clusters:", kmeans.n_clusters)
-test_kmean = '/home/ababa/Downloads/ml-project/code-test/v1/test.csv'
-
-
-
 # test_data.to_csv(test_kmean, index=False)
 # read from kmean  csv file
 test_kmenans_file = pd.read_csv(test_kmean, delimiter=',')
-accuracy3 = accuracy_score(test_kmenans_file['KMeans_Cluster'],test_kmenans_file['ClassId'])
+accuracy3 = accuracy_score(test_kmenans_file['KMeans_Cluster'], test_kmenans_file['ClassId'])
 print(f"Accuracy from file with changed cluster names: {accuracy3}")
 
 
 # Plot confusion matrix
 conf_matrix = confusion_matrix(test_data['ClassId'], y_pred)
 print(f'Confusion Matrix:\n{conf_matrix}')
-
