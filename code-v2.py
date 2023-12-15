@@ -101,7 +101,6 @@ print(f"Silhouette Score for Training Data: {silhouette_train}")
 silhouette_test = silhouette_score(X_test, test_cluster_assignments)
 print(f"Silhouette Score for Test Data: {silhouette_test}")
 
-
 # Apply PCA to reduce dimensionality for visualization
 pca = PCA(n_components=2)
 X_train_pca = pca.fit_transform(X_train)
