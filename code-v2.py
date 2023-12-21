@@ -1,25 +1,24 @@
+#!/bin/python3
 import os
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, log_loss, silhouette_score
+from sklearn.metrics import accuracy_score, confusion_matrix, log_loss, silhouette_score, roc_curve
 from skimage.feature import hog
 import matplotlib.pyplot as plt
 import cv2
 from sklearn.decomposition import PCA
 import seaborn as sns
-
+from sklearn.preprocessing import label_binarize
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
-# Update with the correct relative paths
 test_kmean = os.path.join(script_dir, 'test.csv')
 test_kmean2 = os.path.join(script_dir, 'test2.csv')
 train_file = os.path.join(script_dir, 'train-classes', 'train.csv')
 test_file = os.path.join(script_dir, 'test-classes', 'test.csv')
 image_folder = os.path.join(script_dir, 'train-classes')
 image_folder_test = os.path.join(script_dir, 'test-classes')
-
 
 # load info from csv files
 train_data = pd.read_csv(train_file, delimiter=';')
@@ -29,8 +28,6 @@ test_data = pd.read_csv(test_file, delimiter=';')
 train_images = [os.path.join(image_folder, filename) for filename in train_data['Filename']]
 test_images = [os.path.join(image_folder_test, filename) for filename in test_data['Filename']]
 
-
-# Function to load images
 # Function to load and resize images
 # Function to make hog for photes insted of gray scale
 def load_images(image_paths, target_size=(100, 100), use_hog=True):
@@ -38,21 +35,14 @@ def load_images(image_paths, target_size=(100, 100), use_hog=True):
     for path in image_paths:
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = cv2.resize(img, target_size)  # Resize to a common size
-
-
         if use_hog:
-            # Compute HOG features
             hog_features, hog_image = hog(img, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), visualize=True)
-            # Concatenate flattened image and HOG features
             features = np.concatenate([img.flatten(), hog_features])
         else:
             features = img.flatten()
         # cv2.imshow("Resized Image", img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        # hog = cv2.HOGDescriptor()
-        # hoog = hog.compute(img)
-       # images.append(img.flatten())
         images.append(features)
     return np.array(images)
 
@@ -62,7 +52,7 @@ X_test = load_images(test_images, use_hog=False)
 y_train = train_data['ClassId']
 y_test = test_data['ClassId']
 
-# Train the logistic regression model-----------------
+# Train the logistic regression model
 logreg = LogisticRegression(random_state=42, max_iter=1000)
 logreg.fit(X_train, y_train)
 # Evaluate the model
@@ -73,7 +63,22 @@ print(f"Accuracy: {accuracy}")
 # Plot confusion matrix
 conf_matrix = confusion_matrix(test_data['ClassId'], y_pred)
 print(f'Confusion Matrix:\n{conf_matrix}')
-# kmeans model----------------------------
+# roc
+y_test_bin = label_binarize(y_test, classes=np.unique(y_test))
+y_scores = logreg.predict_proba(X_test)
+fpr, tpr, _ = roc_curve(y_test_bin.ravel(), y_scores.ravel())
+# Plot ROC
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC')
+plt.legend(loc='lower right')
+plt.show()
+# ------------------------------------------------------------------
+
+# kmeans model
 X_train = load_images(train_images, use_hog=True)
 X_test = load_images(test_images, use_hog=True)
 num_clusters = 3
@@ -85,7 +90,7 @@ test_cluster_assignments = kmeans.predict(X_test)
 test_data['KMeans_Cluster'] = test_cluster_assignments
 print("for kmeans model")
 print("Number of Clusters:", kmeans.n_clusters)
-#edited by vim
+# edited by vim
 # test_data.to_csv(test_kmean2, index=False)
 # read from kmean  csv file of
 test_kmenans_file = pd.read_csv(test_kmean, delimiter=',')
@@ -100,6 +105,10 @@ print(f"Silhouette Score for Training Data: {silhouette_train}")
 # Silhouette analysis for test data
 silhouette_test = silhouette_score(X_test, test_cluster_assignments)
 print(f"Silhouette Score for Test Data: {silhouette_test}")
+#----------------
+# Get the sum of squared distances (inertia)
+inertia = kmeans.inertia_
+print(f"Inertia (Sum of Squared Distances): {inertia}")
 
 # Apply PCA to reduce dimensionality for visualization
 pca = PCA(n_components=2)
